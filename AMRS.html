@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMRS - نظام إدارة تأجير السيارات</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 15px; margin: 0; padding-bottom: 50px; }
+        h1, h2 { text-align: center; color: #38bdf8; }
+        .card { background: #1e293b; padding: 15px; margin-bottom: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.4); border-right: 5px solid #38bdf8; }
+        .alert-box { background: #ef4444; color: white; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; text-align: center; display: none; }
+        label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 5px; margin-top: 10px; }
+        input, select { width: 100%; padding: 10px; background: #0f172a; color: #fff; border: 1px solid #334155; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        input:focus, select:focus { outline: none; border-color: #38bdf8; }
+        .btn { background: #38bdf8; color: #0f172a; border: none; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 15px; }
+        .btn:hover { background: #0ea5e9; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .stat-card { background: #1e293b; padding: 12px; border-radius: 8px; text-align: center; border-bottom: 3px solid #10b981; }
+        .stat-card h3 { margin: 0; font-size: 14px; color: #94a3b8; }
+        .stat-card p { margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #10b981; }
+        .contract-item, .car-item { background: #334155; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; }
+        .car-thumb { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; margin-left: 10px; }
+        .btn-danger { background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <h1>🚗 AMRS Car Rental</h1>
+    
+    <!-- تنبيهات المواعيد -->
+    <div id="alertBox" class="alert-box">
+        ⚠️ تنبيه: توجد عقود تنتهي غداً أو انتهى وقتها ويجب متابعتها!
+    </div>
+
+    <!-- لوحة الأرباح -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>إجمالي الدخل الكلي</h3>
+            <p id="totalIncome">0 ج.م</p>
+        </div>
+        <div class="stat-card" style="border-color: #38bdf8;">
+            <h3>العقود النشطة حالياً</h3>
+            <p id="activeContractsCount" style="color: #38bdf8;">0</p>
+        </div>
+    </div>
+
+    <!-- قسم إدارة أسطول السيارات -->
+    <div class="card" style="border-color: #10b981;">
+        <h2>🚙 إضافة عربية جديدة للأسطول</h2>
+        <label>اسم ورقم العربية:</label>
+        <input type="text" id="newCarName" placeholder="مثال: نيسان صني - أرقام ١٢٣٤">
+        <label>صورة العربية:</label>
+        <input type="file" id="newCarImage" accept="image/*">
+        <button class="btn" style="background: #10b981; color: white;" onclick="addNewCar()">إضافة العربية للأسطول ➕</button>
+        
+        <div style="margin-top: 15px;">
+            <b>الأسطول الحالي:</b>
+            <div id="carsListContainer">لا توجد سيارات مضافة.</div>
+        </div>
+    </div>
+
+    <!-- نموذج تسجيل عقد جديد -->
+    <div class="card">
+        <h2>📝 تسجيل عقد إيجار جديد</h2>
+        
+        <label>اسم المستأجر:</label>
+        <input type="text" id="clientName" placeholder="الاسم الكامل">
+
+        <label>رقم تليفون المستأجر:</label>
+        <input type="tel" id="clientPhone" placeholder="رقم الموبايل للتواصل">
+
+        <label>اختر السيارة:</label>
+        <select id="carSelect">
+            <option value="">-- اختار العربية من الأسطول --</option>
+        </select>
+
+        <label>قراءة العداد عند الخروج (كم):</label>
+        <input type="number" id="startKm" placeholder="مثال: 50000">
+
+        <label>مبلغ الإيجار المتفق عليه (ج.م):</label>
+        <input type="number" id="rentalAmount" placeholder="القيمة الإجمالية">
+
+        <label>تاريخ ووقت الاستلام:</label>
+        <input type="datetime-local" id="startDate">
+
+        <label>تاريخ ووقت الإرجاع (المحدد):</label>
+        <input type="datetime-local" id="endDate">
+
+        <label>صور المستندات (عقد، بطاقة/باسبور، رخصة):</label>
+        <input type="file" id="docFiles" multiple accept="image/*">
+
+        <button class="btn" onclick="saveContract()">حفظ العقد وإضافته للنظام 🚀</button>
+    </div>
+
+    <!-- قائمة العقود النشطة والسجلات -->
+    <div class="card">
+        <h2>📋 العقود النشطة حالياً</h2>
+        <div id="activeContractsList">لا توجد عقود نشطة حالياً.</div>
+    </div>
+
+    <div class="card">
+        <h2>📁 أرشيف السجلات السابقة</h2>
+        <div id="archiveList">الأرشيف فارغ.</div>
+    </div>
+
+    <script>
+        let cars = JSON.parse(localStorage.getItem('amrs_cars')) || [];
+        let contracts = JSON.parse(localStorage.getItem('amrs_contracts')) || [];
+
+        window.onload = function() {
+            renderCars();
+            loadData();
+            checkReminders();
+        };
+
+        // إضافة عربية جديدة للأسطول
+        function addNewCar() {
+            const carName = document.getElementById('newCarName').value;
+            const carImgInput = document.getElementById('newCarImage');
+
+            if(!carName) {
+                alert('برجاء كتابة اسم ورقم العربية!');
+                return;
+            }
+
+            if(carImgInput.files.length > 0) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    saveCarToStorage(carName, e.target.result);
+                };
+                reader.readAsDataURL(carImgInput.files[0]);
+            } else {
+                saveCarToStorage(carName, '');
+            }
+        }
+
+        function saveCarToStorage(name, image) {
+            cars.push({ id: Date.now(), name, image });
+            localStorage.setItem('amrs_cars', JSON.stringify(cars));
+            document.getElementById('newCarName').value = '';
+            document.getElementById('newCarImage').value = '';
+            renderCars();
+            alert('تمت إضافة العربية بنجاح! 🚗');
+        }
+
+        function renderCars() {
+            const carsListContainer = document.getElementById('carsListContainer');
+            const carSelect = document.getElementById('carSelect');
+            
+            carsListContainer.innerHTML = '';
+            carSelect.innerHTML = '<option value="">-- اختار العربية من الأسطول --</option>';
+
+            if(cars.length === 0) {
+                carsListContainer.innerHTML = 'لا توجد سيارات مضافة.';
+                return;
+            }
+
+            cars.forEach(car => {
+                // ملء القائمة المنسدلة للعقود
+                carSelect.innerHTML += `<option value="${car.name}">${car.name}</option>`;
+
+                // عرض قائمة السيارات في الأسطول مع زر الحذف
+                carsListContainer.innerHTML += `
+                    <div class="car-item">
+                        <div style="display: flex; align-items: center;">
+                            ${car.image ? `<img src="${car.image}" class="car-thumb">` : ''}
+                            <span><b>${car.name}</b></span>
+                        </div>
+                        <button class="btn-danger" onclick="deleteCar(${car.id})">حذف</button>
+                    </div>
+                `;
+            });
+        }
+
+        function deleteCar(id) {
+            if(confirm('هل أنت متأكد من حذف هذه السيارة من الأسطول؟')) {
+                cars = cars.filter(c => c.id !== id);
+                localStorage.setItem('amrs_cars', JSON.stringify(cars));
+                renderCars();
+            }
+        }
+
+        function saveContract() {
+            const clientName = document.getElementById('clientName').value;
+            const clientPhone = document.getElementById('clientPhone').value;
+            const carName = document.getElementById('carSelect').value;
+            const startKm = document.getElementById('startKm').value;
+            const rentalAmount = parseFloat(document.getElementById('rentalAmount').value) || 0;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const filesInput = document.getElementById('docFiles');
+
+            if (!clientName || !carName || !rentalAmount || !endDate) {
+                alert('برجاء ملء البيانات الأساسية واختيار العربية!');
+                return;
+            }
+
+            let imagesData = [];
+            if (filesInput.files.length > 0) {
+                let processed = 0;
+                Array.from(filesInput.files).forEach(file => {
+                    let reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagesData.push(e.target.result);
+                        processed++;
+                        if(processed === filesInput.files.length) {
+                            finalizeSave(clientName, clientPhone, carName, startKm, rentalAmount, startDate, endDate, imagesData);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                finalizeSave(clientName, clientPhone, carName, startKm, rentalAmount, startDate, endDate, []);
+            }
+        }
+
+        function finalizeSave(clientName, clientPhone, carName, startKm, rentalAmount, startDate, endDate, imagesData) {
+            const newContract = {
+                id: Date.now(),
+                clientName,
+                clientPhone,
+                carName,
+                startKm,
+                rentalAmount,
+                startDate,
+                endDate,
+                images: imagesData,
+                status: 'نشط'
+            };
+
+            contracts.push(newContract);
+            localStorage.setItem('amrs_contracts', JSON.stringify(contracts));
+            
+            alert('تم حفظ العقد بنجاح يا بطل! 🚀');
+            clearForm();
+            loadData();
+        }
+
+        function clearForm() {
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientPhone').value = '';
+            document.getElementById('carSelect').selectedIndex = 0;
+            document.getElementById('startKm').value = '';
+            document.getElementById('rentalAmount').value = '';
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('docFiles').value = '';
+        }
+
+        function loadData() {
+            const activeList = document.getElementById('activeContractsList');
+            const archiveList = document.getElementById('archiveList');
+            
+            activeList.innerHTML = '';
+            archiveList.innerHTML = '';
+
+            let totalIncome = 0;
+            let activeCount = 0;
+
+            contracts.forEach(c => {
+                if(c.status === 'نشط') {
+                    totalIncome += c.rentalAmount;
+                    activeCount++;
+                    
+                    activeList.innerHTML += `
+                        <div class="contract-item" style="display: block;">
+                            <b>👤 المستأجر:</b> ${c.clientName} (${c.clientPhone})<br>
+                            <b>🚗 العربية:</b> ${c.carName} | <b>عداد الخروج:</b> ${c.startKm || 'غير مسجل'} كم<br>
+                            <b>💰 المبلغ:</b> ${c.rentalAmount} ج.م<br>
+                            <b>📅 موعد الرجوع:</b> ${c.endDate}<br>
+                            <button class="btn" style="background:#10b981; padding:6px; font-size:13px; margin-top:8px;" onclick="completeContract(${c.id})">تسجيل إرجاع السيارة وإتمام العقد ✅</button>
+                        </div>
+                    `;
+                } else {
+                    archiveList.innerHTML += `
+                        <div class="contract-item" style="opacity: 0.7; display: block;">
+                            <b>👤 المستأجر:</b> ${c.clientName} | <b>🚗 العربية:</b> ${c.carName}<br>
+                            <b>💰 المبلغ المحصل:</b> ${c.rentalAmount} ج.م | <b>الحالة:</b> مكتمل ومنتهي ✅
+                        </div>
+                    `;
+                }
+            });
+
+            document.getElementById('totalIncome').innerText = totalIncome + " ج.م";
+            document.getElementById('activeContractsCount').innerText = activeCount;
+
+            if(activeList.innerHTML === '') activeList.innerHTML = 'لا توجد عقود نشطة حالياً.';
+            if(archiveList.innerHTML === '') archiveList.innerHTML = 'الأرشيف فارغ.';
+        }
+
+        function completeContract(id) {
+            if(confirm('هل متأكد من إرجاع السيارة وإتمام العقد؟')) {
+                contracts = contracts.map(c => {
+                    if(c.id === id) c.status = 'مكتمل';
+                    return c;
+                });
+                localStorage.setItem('amrs_contracts', JSON.stringify(contracts));
+                loadData();
+            }
+        }
+
+        function checkReminders() {
+            let now = new Date();
+            let alertBox = document.getElementById('alertBox');
+            let hasSoonReturn = false;
+
+            contracts.forEach(c => {
+                if(c.status === 'نشط' && c.endDate) {
+                    let returnDate = new Date(c.endDate);
+                    let diffTime = returnDate - now;
+                    let diffHours = diffTime / (1000 * 60 * 60);
+                    if(diffHours <= 24) {
+                        hasSoonReturn = true;
+                    }
+                }
+            });
+
+            if(hasSoonReturn) {
+                alertBox.style.display = 'block';
+            } else {
+                alertBox.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
